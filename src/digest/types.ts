@@ -15,6 +15,7 @@ export type DigestRow = {
 export type Digest = {
   rows: DigestRow[];
   badLines: number;
+  counts: Record<DigestRow['lastStatus'], number>;
 };
 
 // null means the requested night does not exist.
@@ -29,6 +30,7 @@ export function readNight(runsDir: string, night: string): Digest | null {
   }
   const jobs = new Map<string, DigestRow>();
   let badLines = 0;
+  const counts = { ok: 0, retry: 0, fail: 0 };
   for (const line of content.split(/\r?\n/)) {
     if (!line.trim()) continue;
     try {
@@ -40,6 +42,7 @@ export function readNight(runsDir: string, night: string): Digest | null {
           !(typeof e.owner === 'string' || e.owner === null) ||
           !(typeof e.error === 'string' || e.error === undefined)) throw new Error('invalid entry');
       const status = e.status as DigestRow['lastStatus'];
+      counts[status]++;
       const row = jobs.get(e.job);
       if (!row) {
         jobs.set(e.job, { job: e.job, owner: e.owner as string | null, runs: 1,
@@ -60,5 +63,5 @@ export function readNight(runsDir: string, night: string): Digest | null {
       badLines++;
     }
   }
-  return { rows: [...jobs.values()].sort((a, b) => a.job.localeCompare(b.job)), badLines };
+  return { rows: [...jobs.values()].sort((a, b) => a.job.localeCompare(b.job)), badLines, counts };
 }
